@@ -1,39 +1,26 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 
 const handler: Handler = async (event: HandlerEvent) => {
-  // Only allow POST
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
+    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  // Parse request body
   let body: { address?: string; addresses?: string[]; type?: string };
   try {
     body = JSON.parse(event.body || '{}');
   } catch {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Invalid JSON body' }),
-    };
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON body' }) };
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'OpenAI API key not configured' }),
-    };
+    return { statusCode: 500, body: JSON.stringify({ error: 'OpenAI API key not configured' }) };
   }
 
   try {
-    // Route to appropriate OpenAI endpoint
     let openAIResponse: Response;
 
     if (body.type === 'email') {
-      // Email template generation
       const { originalAddress, verifiedAddress } = body;
       openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -58,8 +45,7 @@ const handler: Handler = async (event: HandlerEvent) => {
         }),
       });
     } else if (body.address) {
-      // Single address verification
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -138,7 +124,6 @@ RESPOND ONLY WITH THE JSON OBJECT, NO OTHER TEXT.`,
         }),
       });
     } else if (body.addresses) {
-      // Batch address verification - process one at a time
       const results = [];
       for (const address of body.addresses) {
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
